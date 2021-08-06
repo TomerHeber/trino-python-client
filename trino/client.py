@@ -441,6 +441,8 @@ class TrinoResult(object):
         # Subsequent fetches from GET requests until next_uri is empty.
         while not self._query.finished:
             rows = self._query.fetch()
+            if len(rows) == 0:
+                yield None
             for row in rows:
                 self._rownumber += 1
                 logger.debug("row %s", row)

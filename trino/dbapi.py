@@ -231,6 +231,10 @@ class Cursor(object):
             return self._query.warnings
         return None
 
+    @property
+    def finished(self):
+        return self._query.finished
+
     def setinputsizes(self, sizes):
         raise trino.exceptions.NotSupportedError
 
