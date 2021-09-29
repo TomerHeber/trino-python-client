@@ -52,7 +52,7 @@ SOCKS_PROXY = os.environ.get("SOCKS_PROXY")
 if SOCKS_PROXY:
     PROXIES = {"http": "socks5://" + SOCKS_PROXY, "https": "socks5://" + SOCKS_PROXY}
 else:
-    PROXIES = None
+    PROXIES = {}
 
 
 class ClientSession(object):
@@ -313,7 +313,7 @@ class TrinoRequest(object):
         return self.get_url(constants.URL_STATEMENT_PATH)
 
     @property
-    def next_uri(self) -> str:
+    def next_uri(self) -> Optional[str]:
         return self._next_uri
 
     def post(self, sql, additional_http_headers=None):
@@ -509,20 +509,23 @@ class TrinoQuery(object):
         status = self._request.process(response)
         self.query_id = status.id
         self._stats.update({"queryId": self.query_id})
-        self._stats.update(status.stats)
+        self._update_state(status)
         self._warnings = getattr(status, "warnings", [])
         if status.next_uri is None:
             self._finished = True
         self._result = TrinoResult(self, status.rows)
         return self._result
 
+    def _update_state(self, status):
+        self._stats.update(status.stats)
+        if status.columns:
+            self._columns = status.columns
+
     def fetch(self) -> List[List[Any]]:
         """Continue fetching data for the current query_id"""
         response = self._request.get(self._request.next_uri)
         status = self._request.process(response)
-        if status.columns:
-            self._columns = status.columns
-        self._stats.update(status.stats)
+        self._update_state(status)
         logger.debug(status)
         self._response_headers = response.headers
         if status.next_uri is None:
